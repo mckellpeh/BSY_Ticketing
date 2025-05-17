@@ -10,28 +10,29 @@
     body { font-family: Arial, sans-serif; padding: 20px; text-align: center; }
     input, button { margin: 10px; padding: 8px; font-size: 16px; }
     canvas, img, video { margin-top: 20px; max-width: 100%; }
+    .scan-buttons { display: flex; justify-content: center; gap: 10px; margin-bottom: 20px; }
   </style>
 </head>
 <body>
+
   <h1>BSY Ticketing System</h1>
   <input type="text" id="qr-input" placeholder="Enter ticket value" />
   <button onclick="generateQRCode()">Generate QR Code</button>
   <div id="qrcode"></div>
+  
+  <h1>Check-In Scanner</h1>
+  <div class="scan-buttons">
+    <button onclick="startCameraScan()">Use Camera</button>
+    <input type="file" accept="image/*" onchange="scanUploadedImage(event)" id="upload-button" style="display: none;">
+    <button onclick="document.getElementById('upload-button').click()">Upload from Library</button>
+  </div>
 
-  <hr>
-
-  <h2>Scan QR Code from Image Upload</h2>
-  <input type="file" accept="image/*" onchange="scanUploadedImage(event)" />
-  <canvas id="canvas" style="display:none"></canvas>
-  <p id="scan-result"></p>
-
-  <hr>
-
-  <h2>Scan QR Code from Camera</h2>
-  <button onclick="startCameraScan()">Start Camera</button>
   <video id="video" autoplay playsinline style="width: 300px; height: auto;"></video>
+  <canvas id="canvas" style="display:none"></canvas>
+  <p id="scan-result" style="font-weight: bold; font-size: 18px; margin-top: 20px;"></p>
 
   <script>
+
     function generateQRCode() {
       const input = document.getElementById("qr-input").value;
       const qrDiv = document.getElementById("qrcode");
