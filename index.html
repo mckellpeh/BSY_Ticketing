@@ -7,32 +7,48 @@
   <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
   <style>
-    body { font-family: Arial, sans-serif; padding: 20px; text-align: center; }
-    input, button { margin: 10px; padding: 8px; font-size: 16px; }
-    canvas, img, video { margin-top: 20px; max-width: 100%; }
-    .scan-buttons { display: flex; justify-content: center; gap: 10px; margin-bottom: 20px; }
+    body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f9f9f9; color: #333; }
+    header { background: #005b96; padding: 15px; color: white; text-align: center; position: sticky; top: 0; z-index: 1000; }
+    nav { background: #004477; display: flex; justify-content: center; padding: 10px; }
+    nav a { color: white; margin: 0 10px; text-decoration: none; font-weight: bold; }
+    nav a:hover { text-decoration: underline; }
+    main { padding: 20px; max-width: 600px; margin: auto; background: white; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+    h1 { font-size: 24px; margin-bottom: 10px; }
+    input, button { margin: 10px 0; padding: 10px; font-size: 16px; width: 100%; max-width: 100%; }
+    canvas, video { margin-top: 20px; max-width: 100%; border-radius: 6px; }
+    .scan-buttons { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+    #scan-result { font-weight: bold; font-size: 18px; margin-top: 20px; }
   </style>
 </head>
 <body>
 
-  <h1>BSY Ticketing System</h1>
-  <input type="text" id="qr-input" placeholder="Enter ticket value" />
-  <button onclick="generateQRCode()">Generate QR Code</button>
-  <div id="qrcode"></div>
-  
-  <h1>Check-In Scanner</h1>
-  <div class="scan-buttons">
-    <button onclick="startCameraScan()">Use Camera</button>
-    <input type="file" accept="image/*" onchange="scanUploadedImage(event)" id="upload-button" style="display: none;">
-    <button onclick="document.getElementById('upload-button').click()">Upload from Library</button>
-  </div>
+  <header>
+    <h1>BSY Ticketing System</h1>
+  </header>
+  <nav>
+    <a href="#scanner">Scan</a>
+    <a href="home.html">Dashboard</a>
+  </nav>
 
-  <video id="video" autoplay playsinline style="width: 300px; height: auto;"></video>
-  <canvas id="canvas" style="display:none"></canvas>
-  <p id="scan-result" style="font-weight: bold; font-size: 18px; margin-top: 20px;"></p>
+  <main id="scanner">
+    <h2>Generate QR Code</h2>
+    <input type="text" id="qr-input" placeholder="Enter ticket value" />
+    <button onclick="generateQRCode()">Generate</button>
+    <div id="qrcode"></div>
+
+    <h2>Check-In Scanner</h2>
+    <div class="scan-buttons">
+      <button onclick="startCameraScan()">Use Camera</button>
+      <input type="file" accept="image/*" onchange="scanUploadedImage(event)" id="upload-button" style="display: none;">
+      <button onclick="document.getElementById('upload-button').click()">Upload from Library</button>
+    </div>
+
+    <video id="video" autoplay playsinline style="width: 100%; height: auto;"></video>
+    <canvas id="canvas" style="display:none"></canvas>
+    <p id="scan-result"></p>
+  </main>
 
   <script>
-
     function generateQRCode() {
       const input = document.getElementById("qr-input").value;
       const qrDiv = document.getElementById("qrcode");
