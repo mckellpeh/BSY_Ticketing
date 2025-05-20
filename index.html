@@ -96,7 +96,7 @@
       }
 
       try {
-        cameraStream = await navigator.mediaDevices.getUserMedia({ video: { video: true } });
+        cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
         video.srcObject = cameraStream;
         video.style.display = "block";
         button.innerText = "Stop Camera";
