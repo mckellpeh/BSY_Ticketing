@@ -6,20 +6,7 @@
   <title>BSY Ticketing System</title>
   <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
-  <style>
-    body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f9f9f9; color: #333; }
-    header { background: #005b96; padding: 15px; color: white; text-align: center; position: sticky; top: 0; z-index: 1000; }
-    nav { background: #004477; display: flex; justify-content: center; padding: 10px; }
-    nav a { color: white; margin: 0 10px; text-decoration: none; font-weight: bold; }
-    nav a:hover { text-decoration: underline; }
-    main { padding: 20px; max-width: 600px; margin: auto; background: white; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-    h1 { font-size: 24px; margin-bottom: 10px; }
-    input, button { margin: 10px 0; padding: 10px; font-size: 16px; width: 100%; max-width: 100%; }
-    canvas, video { margin-top: 20px; max-width: 100%; border-radius: 6px; }
-    .scan-buttons { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
-    #scan-result { font-weight: bold; font-size: 18px; margin-top: 20px; }
-    #video { display: none; }
-  </style>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
@@ -109,7 +96,7 @@
       }
 
       try {
-        cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+        cameraStream = await navigator.mediaDevices.getUserMedia({ video: { video: true } });
         video.srcObject = cameraStream;
         video.style.display = "block";
         button.innerText = "Stop Camera";
