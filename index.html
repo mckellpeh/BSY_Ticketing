@@ -18,6 +18,7 @@
     canvas, video { margin-top: 20px; max-width: 100%; border-radius: 6px; }
     .scan-buttons { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
     #scan-result { font-weight: bold; font-size: 18px; margin-top: 20px; }
+    #video { display: none; }
   </style>
 </head>
 <body>
@@ -28,6 +29,7 @@
   <nav>
     <a href="#scanner">Scan</a>
     <a href="home.html">Dashboard</a>
+    <a href="self-check-in.html">Self Check-In</a>
   </nav>
 
   <main id="scanner">
@@ -38,21 +40,21 @@
 
     <h2>Check-In Scanner</h2>
     <div class="scan-buttons">
-      <button onclick="startCameraScan()">Use Camera</button>
+      <video id="video" autoplay playsinline style="width: 100%; height: auto;"></video>
+      <button id="camera-toggle" onclick="toggleCamera()">Use Camera</button>
       <input type="file" accept="image/*" onchange="scanUploadedImage(event)" id="upload-button" style="display: none;">
       <button onclick="document.getElementById('upload-button').click()">Upload from Library</button>
     </div>
 
-    <video id="video" autoplay playsinline style="width: 100%; height: auto;"></video>
     <canvas id="canvas" style="display:none"></canvas>
     <p id="scan-result"></p>
   </main>
-
+  
   <script>
     function generateQRCode() {
       const input = document.getElementById("qr-input").value;
       const qrDiv = document.getElementById("qrcode");
-      qrDiv.innerHTML = ""; // clear previous
+      qrDiv.innerHTML = "";
       if (input) {
         QRCode.toCanvas(document.createElement('canvas'), input, function (error, canvas) {
           if (error) console.error(error);
@@ -88,16 +90,33 @@
       reader.readAsDataURL(file);
     }
 
-    async function startCameraScan() {
+    let cameraStream = null;
+    let scanning = false; // 🆕 Added to track scanning state
+
+    async function toggleCamera() {
       const video = document.getElementById("video");
+      const button = document.getElementById("camera-toggle");
       const canvas = document.getElementById("canvas");
       const context = canvas.getContext("2d");
 
+      if (cameraStream) {
+        cameraStream.getTracks().forEach(track => track.stop());
+        video.style.display = "none";
+        cameraStream = null;
+        button.innerText = "Use Camera";
+        scanning = false; // 🆕 Stop scanning loop
+        return;
+      }
+
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-        video.srcObject = stream;
+        cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+        video.srcObject = cameraStream;
+        video.style.display = "block";
+        button.innerText = "Stop Camera";
+        scanning = true; // 🆕 Start scanning loop
 
         const scan = () => {
+          if (!scanning) return; // 🆕 Exit if scanning has been stopped
           if (video.readyState === video.HAVE_ENOUGH_DATA) {
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
@@ -106,7 +125,8 @@
             const code = jsQR(imageData.data, canvas.width, canvas.height);
             if (code) {
               document.getElementById("scan-result").innerText = "Scanned QR Code: " + code.data;
-              stream.getTracks().forEach(track => track.stop());
+              // 🆕 Delay before continuing to scan again
+              setTimeout(() => requestAnimationFrame(scan), 1500);
               return;
             }
           }
@@ -114,6 +134,7 @@
         };
 
         requestAnimationFrame(scan);
+
       } catch (err) {
         console.error("Camera error:", err);
         alert("Unable to access camera. Please check permissions.");
