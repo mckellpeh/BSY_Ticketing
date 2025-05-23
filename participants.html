@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Recent Participants</title>
+  <link rel="stylesheet" href="style.css" />
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+    import { getFirestore, collection, getDocs, query, where } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyAmghtrQg1UEAAxcDX4QwkeT9EdTX5lY0M",
+      authDomain: "bsy-ticketing-custom.firebaseapp.com",
+      projectId: "bsy-ticketing-custom",
+      storageBucket: "bsy-ticketing-custom.firebasestorage.app",
+      messagingSenderId: "1040741179293",
+      appId: "1:1040741179293:web:432685e69c8489aae81974",
+      measurementId: "G-19W80QSBH2"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    async function performSearch() {
+      const term = document.getElementById("searchInput").value.toLowerCase();
+      const snapshot = await getDocs(collection(db, 'Participants'));
+      const results = [];
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        if (
+          (data.name && data.name.toLowerCase().includes(term)) ||
+          (data.email && data.email.toLowerCase().includes(term)) ||
+          (data.groupId && data.groupId.toLowerCase().includes(term))
+        ) {
+          results.push(data);
+        }
+      });
+      const resultTable = document.getElementById("search-results-body");
+      resultTable.innerHTML = "";
+      results.slice(0, 50).forEach(entry => {
+        const row = `<tr>
+          <td>${entry.name}</td>
+          <td>${entry.email}</td>
+          <td>${entry.groupId || '-'}</td>
+          <td>${entry.checkedIn ? 'Yes' : 'No'}</td>
+        </tr>`;
+        resultTable.insertAdjacentHTML('beforeend', row);
+      });
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      document.getElementById("searchBtn").addEventListener("click", performSearch);
+    });
+  </script>
+</head>
+<body>
+  <header>
+    <h1>BSY Ticketing Dashboard</h1>
+  </header>
+  <nav>
+    <a href="index.html">Scan</a>
+    <a href="dashboard.html">Dashboard</a>
+    <a href="participants.html">Participants</a>
+    <a href="self-check-in.html">Self Check-In</a>
+  </nav>
+  <main>
+    <section>
+      <h2>Search Participants</h2>
+      <input type="text" id="searchInput" placeholder="Search by name, email or group ID" />
+      <button id="searchBtn">Search</button>
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Group</th>
+            <th>Scanned</th>
+          </tr>
+        </thead>
+        <tbody id="search-results-body"></tbody>
+      </table>
+    </section>
+
+  </main>
+</body>
+</html>

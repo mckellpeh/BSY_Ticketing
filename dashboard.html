@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BSY Dashboard</title>
+  <link rel="stylesheet" href="style.css" />
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+    import { getFirestore, collection, getDocs, query } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyAmghtrQg1UEAAxcDX4QwkeT9EdTX5lY0M",
+      authDomain: "bsy-ticketing-custom.firebaseapp.com",
+      projectId: "bsy-ticketing-custom",
+      storageBucket: "bsy-ticketing-custom.firebasestorage.app",
+      messagingSenderId: "1040741179293",
+      appId: "1:1040741179293:web:432685e69c8489aae81974",
+      measurementId: "G-19W80QSBH2"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    async function fetchStats() {
+      const snapshot = await getDocs(collection(db, 'Participants'));
+      let performerTotal = 0;
+      let visitorTotal = 0;
+      let performerChecked = 0;
+      let visitorChecked = 0;
+      let groups = new Set();
+      let checkedGroups = new Set();
+      let partialGroups = new Set();
+      const groupMap = {};
+      const uncheckedByGroup = {};
+
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        if (data.role === 'performer') {
+          performerTotal++;
+          if (data.checkedIn) performerChecked++;
+        } else if (data.role === 'visitor') {
+          visitorTotal++;
+          if (data.checkedIn) visitorChecked++;
+        }
+        if (data.groupId) {
+          groups.add(data.groupId);
+          if (!groupMap[data.groupId]) groupMap[data.groupId] = { total: 0, checked: 0 };
+          groupMap[data.groupId].total++;
+          if (data.checkedIn) groupMap[data.groupId].checked++;
+        }
+      });
+
+      for (const [groupId, counts] of Object.entries(groupMap)) {
+        if (counts.checked === counts.total) {
+          checkedGroups.add(groupId);
+        } else if (counts.checked > 0) {
+          partialGroups.add(groupId);
+        }
+      }
+
+      document.getElementById("performer-count").innerText = `${performerChecked} / ${performerTotal}`;
+      document.getElementById("visitor-count").innerText = `${visitorChecked} / ${visitorTotal}`;
+      document.getElementById("group-count").innerText = `${checkedGroups.size} / ${groups.size}`;
+      document.getElementById("partial-group-count").innerText = `${partialGroups.size}`;
+
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        if (data.groupId && partialGroups.has(data.groupId) && !data.checkedIn) {
+          if (!uncheckedByGroup[data.groupId]) uncheckedByGroup[data.groupId] = [];
+          uncheckedByGroup[data.groupId].push(data);
+        }
+      });
+
+      let groupHTML = "";
+      for (const [groupId, members] of Object.entries(uncheckedByGroup)) {
+        const safeId = groupId.replace(/[^a-zA-Z0-9_-]/g, "");
+        groupHTML += `<div class="group-toggle">
+          <button class="toggle-button" onclick="toggleGroup('${safeId}')">
+            <span>Group ${groupId}</span>
+            <span class="arrow" id="arrow-${safeId}">&#9654;</span>
+          </button>
+          <ul id="group-${safeId}" class="group-members" style="display: none;">
+            ${members.map(m => `<li><span>${m.name}</span><span>${m.checkedIn ? 'scanned' : 'missing'}</span></li>`).join('')}
+          </ul>
+        </div>`;
+      }
+
+      const partialGroupContainer = document.getElementById("partial-group-details");
+      partialGroupContainer.innerHTML = groupHTML || "<p>No unchecked-in members found.</p>";
+    }
+
+    async function fetchRecentScans() {
+      const snapshot = await getDocs(query(collection(db, 'Participants')));
+      const recent = [];
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        if (data.checkedIn && data.checkInTime) {
+          recent.push({
+            name: data.name,
+            email: data.email,
+            checkInTime: data.checkInTime.toDate ? data.checkInTime.toDate() : new Date(data.checkInTime),
+          });
+        }
+      });
+      recent.sort((a, b) => b.checkInTime - a.checkInTime);
+      const list = document.getElementById("recent-list");
+      list.innerHTML = "";
+      recent.slice(0, 5).forEach(entry => {
+        const li = document.createElement("li");
+        li.textContent = `${entry.checkInTime.toLocaleString()} - ${entry.name} (${entry.email})`;
+        list.appendChild(li);
+      });
+    }
+
+    fetchStats();
+    fetchRecentScans();
+
+    window.toggleGroup = function (id) {
+      const ul = document.getElementById("group-" + id);
+      const arrow = document.getElementById("arrow-" + id);
+      if (ul.style.display === "none") {
+        ul.style.display = "block";
+        arrow.innerHTML = "&#9660;";
+      } else {
+        ul.style.display = "none";
+        arrow.innerHTML = "&#9654;";
+      }
+    }
+  </script>
+</head>
+<body>
+  <header>
+    <h1>BSY Ticketing Dashboard</h1>
+  </header>
+  <nav>
+    <a href="index.html">Scan</a>
+    <a href="dashboard.html">Dashboard</a>
+    <a href="participants.html">Participants</a>
+    <a href="self-check-in.html">Self Check-In</a>
+  </nav>
+
+  <main>
+    <section class="stat-row">
+      <div class="stat-box">
+        <h2>Performers</h2>
+        <p id="performer-count">Loading...</p>
+      </div>
+      <div class="stat-box">
+        <h2>Visitors</h2>
+        <p id="visitor-count">Loading...</p>
+      </div>
+    </section>
+
+    <section>
+      <h2>Recent Scans</h2>
+      <ul id="recent-list">Loading...</ul>
+    </section>
+
+    <section class="stat-row">
+      <div class="stat-box">
+        <h2>Groups (Fully Scanned)</h2>
+        <p id="group-count">Loading...</p>
+      </div>
+      <div class="stat-box">
+        <h2>Groups (Partial Scanned)</h2>
+        <p id="partial-group-count">Loading...</p>
+      </div>
+    </section>
+
+    <section>
+      <h2>Unscanned Group Members</h2>
+      <div id="partial-group-details">Loading...</div>
+    </section>
+    
+  </main>
+</body>
+</html>
