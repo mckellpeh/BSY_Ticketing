@@ -6,130 +6,181 @@
   <title>BSY Ticketing System</title>
   <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+    import { getFirestore, collection, query, where, getDocs, updateDoc, doc, Timestamp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyAmghtrQg1UEAAxcDX4QwkeT9EdTX5lY0M",
+      authDomain: "bsy-ticketing-custom.firebaseapp.com",
+      projectId: "bsy-ticketing-custom",
+      storageBucket: "bsy-ticketing-custom.firebasestorage.app",
+      messagingSenderId: "1040741179293",
+      appId: "1:1040741179293:web:432685e69c8489aae81974",
+      measurementId: "G-19W80QSBH2"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    async function verifyAndCheckIn(scannedCode) {
+      const q = query(collection(db, "Participants"), where("ticketQRId", "==", scannedCode));
+      const snapshot = await getDocs(q);
+      const resultDisplay = document.getElementById("scan-result");
+
+      if (snapshot.empty) {
+        resultDisplay.innerText = "❌ Invalid or unknown ticket.";
+        return;
+      }
+
+      snapshot.forEach(async (docSnap) => {
+        const data = docSnap.data();
+        if (data.checkedIn) {
+          resultDisplay.innerText = `⚠️ ${data.name} has already checked in.`;
+        } else {
+          const docRef = doc(db, "Participants", docSnap.id);
+          await updateDoc(docRef, {
+            checkedIn: true,
+            checkInTime: Timestamp.now(),
+            scannedBy: "staff scan"
+          });
+          resultDisplay.innerText = `✅ Ticket scanned! Welcome, ${data.name}`;
+        }
+      });
+    }
+
+    window.verifyAndCheckIn = verifyAndCheckIn;
+  </script>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-  <header>
-    <h1>BSY Ticketing System</h1>
-  </header>
-  <nav>
-    <a href="#scanner">Scan</a>
-    <a href="home.html">Dashboard</a>
-    <a href="self-check-in.html">Self Check-In</a>
-  </nav>
+<header>
+  <h1>BSY Ticketing System</h1>
+</header>
+<nav>
+  <a href="#scanner">Scan</a>
+  <a href="dashboard.html">Dashboard</a>
+  <a href="participants.html">Participants</a>
+  <a href="self-check-in.html">Self Check-In</a>
+</nav>
 
-  <main id="scanner">
-    
+<main id="scanner">
 
-    <h2>Check-In Scanner</h2>
-    <div class="scan-buttons">
-      <video id="video" autoplay playsinline style="width: 100%; height: auto;"></video>
-      <button id="camera-toggle" onclick="toggleCamera()">Use Camera</button>
-      <input type="file" accept="image/*" onchange="scanUploadedImage(event)" id="upload-button" style="display: none;">
-      <button onclick="document.getElementById('upload-button').click()">Upload from Library</button>
-    </div>
+  <h2>Check-In Scanner</h2>
+  <div class="scan-buttons">
+    <video id="video" autoplay playsinline style="width: 100%; height: auto;"></video>
+    <button id="camera-toggle" onclick="toggleCamera()">Use Camera</button>
+    <input type="file" accept="image/*" onchange="scanUploadedImage(event)" id="upload-button" style="display: none;">
+    <button onclick="document.getElementById('upload-button').click()">Upload from Library</button>
+  </div>
 
-    <canvas id="canvas" style="display:none"></canvas>
-    <p id="scan-result"></p>
-    
-    <h2>Generate QR Code</h2>
-    <input type="text" id="qr-input" placeholder="Enter ticket value" />
-    <button onclick="generateQRCode()">Generate</button>
-    <div id="qrcode"></div>
-    
-  </main>
-  
-  <script>
-    function generateQRCode() {
-      const input = document.getElementById("qr-input").value;
-      const qrDiv = document.getElementById("qrcode");
-      qrDiv.innerHTML = "";
-      if (input) {
-        QRCode.toCanvas(document.createElement('canvas'), input, function (error, canvas) {
-          if (error) console.error(error);
-          qrDiv.appendChild(canvas);
-        });
-      }
+  <canvas id="canvas" style="display:none"></canvas>
+  <p id="scan-result"></p>
+  <p id="scanned-value" style="color: gray; font-style: italic;"></p>
+
+
+  <h2>Generate QR Code</h2>
+  <input type="text" id="qr-input" placeholder="Enter ticket value" />
+  <button onclick="generateQRCode()">Generate</button>
+  <div id="qrcode"></div>
+
+</main>
+
+<script>
+  function generateQRCode() {
+    const input = document.getElementById("qr-input").value;
+    const qrDiv = document.getElementById("qrcode");
+    qrDiv.innerHTML = "";
+    if (input) {
+      QRCode.toCanvas(document.createElement('canvas'), input, function (error, canvas) {
+        if (error) console.error(error);
+        qrDiv.appendChild(canvas);
+      });
+    }
+  }
+
+  function scanUploadedImage(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function () {
+      const img = new Image();
+      img.onload = function () {
+        const canvas = document.getElementById("canvas");
+        const context = canvas.getContext("2d");
+        canvas.width = img.width;
+        canvas.height = img.height;
+        context.drawImage(img, 0, 0);
+
+        const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+        const code = jsQR(imageData.data, canvas.width, canvas.height);
+        if (code) {
+          document.getElementById("scanned-value").innerText = "Scanned QR: " + code.data;
+          verifyAndCheckIn(code.data);
+
+        } else {
+          document.getElementById("scan-result").innerText = "No QR code found.";
+        }
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  let cameraStream = null;
+  let scanning = false; // 🆕 Added to track scanning state
+
+  async function toggleCamera() {
+    const video = document.getElementById("video");
+    const button = document.getElementById("camera-toggle");
+    const canvas = document.getElementById("canvas");
+    const context = canvas.getContext("2d");
+
+    if (cameraStream) {
+      cameraStream.getTracks().forEach(track => track.stop());
+      video.style.display = "none";
+      cameraStream = null;
+      button.innerText = "Use Camera";
+      scanning = false; // 🆕 Start scanning loop
+      return;
     }
 
-    function scanUploadedImage(event) {
-      const file = event.target.files[0];
-      if (!file) return;
+    try {
+      cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+      video.srcObject = cameraStream;
+      video.style.display = "block";
+      button.innerText = "Stop Camera";
+      scanning = true; // 🆕 Start scanning loop
 
-      const reader = new FileReader();
-      reader.onload = function () {
-        const img = new Image();
-        img.onload = function () {
-          const canvas = document.getElementById("canvas");
-          const context = canvas.getContext("2d");
-          canvas.width = img.width;
-          canvas.height = img.height;
-          context.drawImage(img, 0, 0);
-
+      const scan = () => {
+        if (!scanning) return; // 🆕 Exit if scanning has been stopped
+        if (video.readyState === video.HAVE_ENOUGH_DATA) {
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+          context.drawImage(video, 0, 0, canvas.width, canvas.height);
           const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
           const code = jsQR(imageData.data, canvas.width, canvas.height);
           if (code) {
-            document.getElementById("scan-result").innerText = "Scanned QR Code: " + code.data;
-          } else {
-            document.getElementById("scan-result").innerText = "No QR code found.";
+            document.getElementById("scanned-value").innerText = "Scanned QR: " + code.data;
+            verifyAndCheckIn(code.data);
+
+            // 🆕 Delay before continuing to scan again
+            setTimeout(() => requestAnimationFrame(scan), 1500);
+            return;
           }
-        };
-        img.src = reader.result;
-      };
-      reader.readAsDataURL(file);
-    }
-
-    let cameraStream = null;
-    let scanning = false; // 🆕 Added to track scanning state
-
-    async function toggleCamera() {
-      const video = document.getElementById("video");
-      const button = document.getElementById("camera-toggle");
-      const canvas = document.getElementById("canvas");
-      const context = canvas.getContext("2d");
-
-      if (cameraStream) {
-        cameraStream.getTracks().forEach(track => track.stop());
-        video.style.display = "none";
-        cameraStream = null;
-        button.innerText = "Use Camera";
-        scanning = false; // 🆕 Stop scanning loop
-        return;
-      }
-
-      try {
-        cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-        video.srcObject = cameraStream;
-        video.style.display = "block";
-        button.innerText = "Stop Camera";
-        scanning = true; // 🆕 Start scanning loop
-
-        const scan = () => {
-          if (!scanning) return; // 🆕 Exit if scanning has been stopped
-          if (video.readyState === video.HAVE_ENOUGH_DATA) {
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            context.drawImage(video, 0, 0, canvas.width, canvas.height);
-            const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-            const code = jsQR(imageData.data, canvas.width, canvas.height);
-            if (code) {
-              document.getElementById("scan-result").innerText = "Scanned QR Code: " + code.data;
-              // 🆕 Delay before continuing to scan again
-              setTimeout(() => requestAnimationFrame(scan), 1500);
-              return;
-            }
-          }
-          requestAnimationFrame(scan);
-        };
-
+        }
         requestAnimationFrame(scan);
+      };
 
-      } catch (err) {
-        console.error("Camera error:", err);
-        alert("Unable to access camera. Please check permissions.");
-      }
+      requestAnimationFrame(scan);
+      
+    } catch (err) {
+      console.error("Camera error:", err);
+      alert("Unable to access camera. Please check permissions.");
     }
-  </script>
+  }
+</script>
 </body>
 </html>
