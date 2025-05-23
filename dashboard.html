@@ -66,7 +66,7 @@
 
       snapshot.forEach(doc => {
         const data = doc.data();
-        if (data.groupId && partialGroups.has(data.groupId) && !data.checkedIn) {
+        if (data.groupId && partialGroups.has(data.groupId)) {
           if (!uncheckedByGroup[data.groupId]) uncheckedByGroup[data.groupId] = [];
           uncheckedByGroup[data.groupId].push(data);
         }
@@ -75,13 +75,15 @@
       let groupHTML = "";
       for (const [groupId, members] of Object.entries(uncheckedByGroup)) {
         const safeId = groupId.replace(/[^a-zA-Z0-9_-]/g, "");
+        // Sort: checkedIn true (scanned) first, then false
+        const sortedMembers = members.sort((a, b) => (b.checkedIn === true) - (a.checkedIn === true));
         groupHTML += `<div class="group-toggle">
           <button class="toggle-button" onclick="toggleGroup('${safeId}')">
             <span>Group ${groupId}</span>
             <span class="arrow" id="arrow-${safeId}">&#9654;</span>
           </button>
           <ul id="group-${safeId}" class="group-members" style="display: none;">
-            ${members.map(m => `<li><span>${m.name}</span><span>${m.checkedIn ? 'scanned' : 'missing'}</span></li>`).join('')}
+            ${sortedMembers.map(m => `<li><span>${m.name}</span><span>${m.checkedIn ? 'scanned' : ''}</span></li>`).join('')}
           </ul>
         </div>`;
       }
